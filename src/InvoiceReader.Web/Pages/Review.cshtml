@@ -1,0 +1,141 @@
+@page "/Review/{id:int?}"
+@model ReviewModel
+@{
+    ViewData["Title"] = "Pregled fakture";
+    ViewData["Wide"] = true;
+}
+
+@if (Model.Doc is null)
+{
+    <div class="empty">
+        <h1>Nema faktura za pregled</h1>
+        <p class="muted">Sve je pregledano. Nove fakture se pojave ovdje čim ih AI pročita.</p>
+        <a class="button" href="/">Nazad na klijente</a>
+    </div>
+    return;
+}
+
+@{
+    var doc = Model.Doc;
+    var inv = doc.Invoice!;
+    var isPdf = doc.ContentType == "application/pdf";
+    var readOnly = doc.Status != DocumentStatus.NeedsReview;
+}
+
+<div class="page-head">
+    <div>
+        <p class="crumbs"><a href="/">Klijenti</a> / <a href="/Clients/@doc.ClientId">@(doc.Client!.Name)</a></p>
+        <h1>@(inv.SupplierName ?? doc.OriginalFileName)</h1>
+    </div>
+    <div class="head-meta">
+        @if (!readOnly && Model.Position > 0)
+        {
+            <span class="muted">Faktura @Model.Position od @Model.WaitingForClient za ovog klijenta</span>
+        }
+        <partial name="_Status" model="doc.Status" />
+    </div>
+</div>
+
+<div class="review">
+    <section class="viewer">
+        @if (isPdf)
+        {
+            <iframe src="/files/@doc.Id" title="Faktura"></iframe>
+        }
+        else
+        {
+            <a href="/files/@doc.Id" target="_blank" rel="noopener" title="Otvori u punoj veličini">
+                <img src="/files/@doc.Id" alt="Slika fakture @doc.OriginalFileName" />
+            </a>
+        }
+    </section>
+
+    <section class="fields card">
+        <h2>Šta je softver pročitao</h2>
+
+        @if (Model.Error is not null)
+        {
+            <p class="error">@Model.Error</p>
+        }
+        @if (Model.Warnings.Count > 0)
+        {
+            <ul class="warnings">
+                @foreach (var w in Model.Warnings)
+                {
+                    <li>@w</li>
+                }
+            </ul>
+        }
+        else if (!readOnly)
+        {
+            <p class="ok-line">Sve provjere su prošle: iznosi se slažu, PDV je 17%.</p>
+        }
+
+        <form method="post" asp-route-id="@doc.Id" id="review-form" class="field-grid">
+            <label for="f-supplier">Dobavljač</label>
+            <input id="f-supplier" name="Form.SupplierName" value="@Model.Form.SupplierName" disabled="@readOnly" autofocus />
+
+            <label for="f-taxid">ID broj (JIB)</label>
+            <input id="f-taxid" name="Form.SupplierTaxId" value="@Model.Form.SupplierTaxId" inputmode="numeric" class="mono" disabled="@readOnly" />
+
+            <label for="f-vatno">PDV broj</label>
+            <input id="f-vatno" name="Form.SupplierVatNumber" value="@Model.Form.SupplierVatNumber" inputmode="numeric" class="mono" disabled="@readOnly" />
+
+            <label for="f-number">Broj računa</label>
+            <input id="f-number" name="Form.InvoiceNumber" value="@Model.Form.InvoiceNumber" disabled="@readOnly" />
+
+            <label for="f-date">Datum</label>
+            <input id="f-date" name="Form.InvoiceDate" type="date" value="@Model.Form.InvoiceDate?.ToString("yyyy-MM-dd")" disabled="@readOnly" />
+
+            <label for="f-net">Osnovica (KM)</label>
+            <input id="f-net" name="Form.NetAmount" value="@Model.Form.NetAmount" inputmode="decimal" class="num" disabled="@readOnly" />
+
+            <label for="f-vat">PDV (KM)</label>
+            <input id="f-vat" name="Form.VatAmount" value="@Model.Form.VatAmount" inputmode="decimal" class="num" disabled="@readOnly" />
+
+            <label for="f-total">Ukupno (KM)</label>
+            <input id="f-total" name="Form.TotalAmount" value="@Model.Form.TotalAmount" inputmode="decimal" class="num strong" disabled="@readOnly" />
+
+            <label for="f-account">Konto troška</label>
+            <div>
+                <select id="f-account" name="Form.AccountCode" disabled="@readOnly">
+                    <option value="">— izaberite konto —</option>
+                    @foreach (var a in Model.Accounts)
+                    {
+                        <option value="@a.Code" selected="@(a.Code == Model.Form.AccountCode)">@a.Code · @a.Name</option>
+                    }
+                </select>
+                @if (inv.AccountSuggested && inv.AccountCode is not null)
+                {
+                    <p class="suggested">Prijedlog na osnovu ranijih knjiženja ovog dobavljača.</p>
+                }
+                else if (!readOnly && inv.AccountCode is null)
+                {
+                    <p class="hint">Novi dobavljač: izaberite konto jednom, sljedeći put softver ga predloži sam.</p>
+                }
+            </div>
+
+            <div class="form-actions">
+                @if (!readOnly)
+                {
+                    <button type="submit" asp-page-handler="Skip" asp-route-id="@doc.Id" formnovalidate>Preskoči</button>
+                    <button type="submit" asp-page-handler="Confirm" asp-route-id="@doc.Id" class="primary">Potvrdi <kbd>Ctrl</kbd>+<kbd>Enter</kbd></button>
+                }
+                else if (doc.Status == DocumentStatus.Confirmed)
+                {
+                    <button type="submit" asp-page-handler="Reopen" asp-route-id="@doc.Id">Izmijeni</button>
+                }
+            </div>
+        </form>
+
+        <details class="raw">
+            <summary>Tehnički detalji</summary>
+            <p class="small muted">Model: @(inv.ModelUsed + (inv.Confidence is double c ? $" · sigurnost {Math.Round(c * 100)}%" : ""))</p>
+            <pre>@inv.RawJson</pre>
+        </details>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/site.js" asp-append-version="true"></script>
+}

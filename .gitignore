@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+App_Data/
+appsettings.Local.json
+.env
+*.db
+*.db-shm
+*.db-wal
+TestResults/
+.claude/

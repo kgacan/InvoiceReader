@@ -1,0 +1,28 @@
+@page "/u/{token}"
+@model UploadModel
+@{
+    ViewData["Title"] = "Slanje faktura";
+}
+<section class="upload-public">
+    <p class="muted small">@Model.OfficeName</p>
+    <h1>Fakture za @Model.ClientName</h1>
+
+    @if (Model.SavedCount is int n)
+    {
+        <p class="notice">@(n == 1 ? "Poslana je 1 faktura." : $"Poslano faktura: {n}.") Hvala! Možete poslati još.</p>
+    }
+    @foreach (var e in Model.Errors)
+    {
+        <p class="error">@e</p>
+    }
+
+    <form method="post" enctype="multipart/form-data" class="stack">
+        <label for="camera" class="big-button">Slikaj fakturu</label>
+        <input id="camera" name="files" type="file" accept="image/*" capture="environment" class="visually-hidden" onchange="this.form.submit()" />
+
+        <label for="pick">ili izaberite slike / PDF s uređaja</label>
+        <input id="pick" name="files" type="file" multiple accept="@FileStore.AcceptAttribute" />
+        <button type="submit" class="primary">Pošalji</button>
+    </form>
+    <p class="hint">Slikajte fakturu ravno, na svjetlu, da se vide svi brojevi.</p>
+</section>

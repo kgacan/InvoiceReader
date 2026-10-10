@@ -1,0 +1,74 @@
+@page
+@model SettingsModel
+@{
+    ViewData["Title"] = "Postavke";
+}
+<div class="page-head">
+    <h1>Postavke</h1>
+</div>
+
+@if (Model.Message is not null)
+{
+    <p class="notice">@Model.Message</p>
+}
+
+<div class="grid-2">
+    <section class="card">
+        <h2>Ured</h2>
+        <p><strong>@Model.Office.Name</strong></p>
+        <p class="muted small">AI: @Model.AiName</p>
+        <p class="muted small">Naučenih pravila dobavljač → konto: @Model.RuleCount</p>
+        <form method="post" asp-page-handler="Office" class="stack">
+            <label for="program">Knjigovodstveni program</label>
+            <input id="program" name="AccountingProgram" value="@Model.Office.AccountingProgram" />
+            <label for="vat">Konto ulaznog PDV-a</label>
+            <input id="vat" name="VatInputAccount" value="@Model.Office.VatInputAccount" class="mono" />
+            <label for="sup">Konto dobavljača</label>
+            <input id="sup" name="SuppliersAccount" value="@Model.Office.SuppliersAccount" class="mono" />
+            <button type="submit">Sačuvaj</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Kontni plan</h2>
+        <p class="muted small">Jedan konto po redu: <code>šifra;naziv</code>. Može se zalijepiti iz Excela. Demo konta su samo primjer.</p>
+        <form method="post" asp-page-handler="Accounts" class="stack">
+            <label for="accounts" class="visually-hidden">Kontni plan</label>
+            <textarea id="accounts" name="AccountsText" rows="12" class="mono">@Model.AccountsText</textarea>
+            <button type="submit">Zamijeni kontni plan</button>
+        </form>
+    </section>
+</div>
+
+<h2>Klijenti i linkovi za slanje</h2>
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>Klijent</th><th>ID broj</th><th>Link</th><th></th></tr></thead>
+        <tbody>
+            @foreach (var c in Model.ClientList)
+            {
+                <tr>
+                    <td>@c.Name</td>
+                    <td class="mono">@c.TaxId</td>
+                    <td class="mono small">/u/@(c.UploadToken[..8])…</td>
+                    <td class="actions">
+                        <form method="post" asp-page-handler="NewLink" asp-route-clientId="@c.Id" class="inline">
+                            <button type="submit" class="link">Novi link</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<section class="card narrow">
+    <h2>Dodaj klijenta</h2>
+    <form method="post" asp-page-handler="AddClient" class="stack">
+        <label for="cname">Naziv</label>
+        <input id="cname" name="NewClientName" required />
+        <label for="ctax">ID broj (13 cifara)</label>
+        <input id="ctax" name="NewClientTaxId" inputmode="numeric" class="mono" />
+        <button type="submit" class="primary">Dodaj</button>
+    </form>
+</section>

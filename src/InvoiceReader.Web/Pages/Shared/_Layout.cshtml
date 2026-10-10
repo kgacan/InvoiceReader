@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Title"] is string t ? t + " · " : "")Čitač faktura</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        var path = Context.Request.Path.Value ?? "/";
+        <header class="topbar">
+            <a class="brand" href="/">Čitač faktura <span class="demo-tag">demo</span></a>
+            <nav>
+                <a href="/" class="@(path == "/" || path.StartsWith("/Clients") ? "active" : "")">Klijenti</a>
+                <a href="/Review" class="@(path.StartsWith("/Review") ? "active" : "")">Za pregled</a>
+                <a href="/Export" class="@(path.StartsWith("/Export") ? "active" : "")">Izvoz</a>
+                <a href="/Settings" class="@(path.StartsWith("/Settings") ? "active" : "")">Postavke</a>
+            </nav>
+            <form method="post" asp-page="/Logout" class="logout">
+                <span class="muted">@User.Identity.Name</span>
+                <button type="submit" class="link">Odjava</button>
+            </form>
+        </header>
+    }
+    <main class="@(ViewData["Wide"] is true ? "wide" : "")">
+        @RenderBody()
+    </main>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

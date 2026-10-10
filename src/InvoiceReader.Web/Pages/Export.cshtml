@@ -1,0 +1,79 @@
+@page
+@model ExportModel
+@{
+    ViewData["Title"] = "Izvoz";
+}
+<div class="page-head">
+    <h1>Izvoz u knjigovodstveni program</h1>
+</div>
+
+<div class="grid-2">
+    <section class="card">
+        <h2>Napravi datoteku za uvoz</h2>
+        <p class="muted">Potvrđene fakture za izabrani mjesec idu u jednu datoteku. Format: @Model.Office.AccountingProgram (CSV, tačka-zarez, decimalni zarez).</p>
+
+        <form method="get" class="stack" id="pick-form">
+            <label for="client">Klijent</label>
+            <select id="client" name="ClientId" onchange="this.form.submit()">
+                <option value="">— izaberite —</option>
+                @foreach (var c in Model.Clients)
+                {
+                    <option value="@c.Id" selected="@(c.Id == Model.ClientId)">@c.Name</option>
+                }
+            </select>
+            <label for="period">Mjesec (po datumu računa)</label>
+            <input id="period" name="Period" type="month" value="@Model.Period" onchange="this.form.submit()" />
+        </form>
+
+        @if (Model.ClientId is not null)
+        {
+            <p>Spremno za izvoz: <strong>@Model.ReadyCount</strong> potvrđenih faktura.</p>
+        }
+
+        <form method="post" class="stack">
+            <input type="hidden" name="ClientId" value="@Model.ClientId" />
+            <input type="hidden" name="Period" value="@Model.Period" />
+            <label class="check"><input type="checkbox" name="IncludeExported" value="true" /> Uključi i već izvezene fakture</label>
+            @if (Model.Error is not null)
+            {
+                <p class="error">@Model.Error</p>
+            }
+            <button type="submit" class="primary" disabled="@(Model.ClientId is null)">Preuzmi datoteku</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Kako ide u program</h2>
+        <ol class="steps">
+            <li>Preuzmite datoteku ovdje.</li>
+            <li>U knjigovodstvenom programu otvorite <em>Uvoz</em> ulaznih faktura.</li>
+            <li>Izaberite datoteku. Sve fakture uđu odjednom.</li>
+        </ol>
+        <p class="hint">Za svaki program (npr. SmartCode, Pantheon) pravi se poseban izvoz u njegovom tačnom formatu. Ovaj demo pravi opšti CSV.</p>
+    </section>
+</div>
+
+<h2>Zadnji izvozi</h2>
+@if (Model.Recent.Count == 0)
+{
+    <p class="muted">Još nema izvoza.</p>
+}
+else
+{
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Datoteka</th><th>Mjesec</th><th class="num">Faktura</th><th>Vrijeme</th></tr></thead>
+            <tbody>
+                @foreach (var e in Model.Recent)
+                {
+                    <tr>
+                        <td>@e.FileName</td>
+                        <td>@e.Period</td>
+                        <td class="num">@e.InvoiceCount</td>
+                        <td>@e.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

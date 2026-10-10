@@ -1,0 +1,22 @@
+@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Prijava";
+}
+<section class="login">
+    <h1>Čitač faktura</h1>
+    <p class="muted">Demo verzija. Svi klijenti i fakture su izmišljeni.</p>
+    <form method="post" class="stack">
+        <label for="email">Email</label>
+        <input id="email" name="Email" type="email" value="@Model.Email" autocomplete="username" required />
+        <label for="password">Lozinka</label>
+        <input id="password" name="Password" type="password" autocomplete="current-password" required />
+        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+        @if (Model.Error is not null)
+        {
+            <p class="error">@Model.Error</p>
+        }
+        <button type="submit" class="primary">Prijavi se</button>
+    </form>
+    <p class="hint">Demo pristup: <code>@Model.DemoEmail</code> / lozinka iz <code>appsettings.json</code> (Demo:Password)</p>
+</section>

@@ -1,0 +1,22 @@
+@model DocumentStatus
+@switch (Model)
+{
+    case DocumentStatus.Uploaded:
+        <span class="pill">Čeka AI</span>
+        break;
+    case DocumentStatus.Reading:
+        <span class="pill info">AI čita…</span>
+        break;
+    case DocumentStatus.NeedsReview:
+        <span class="pill warn">Za pregled</span>
+        break;
+    case DocumentStatus.Confirmed:
+        <span class="pill ok">Potvrđeno</span>
+        break;
+    case DocumentStatus.Exported:
+        <span class="pill done">Izvezeno</span>
+        break;
+    case DocumentStatus.Failed:
+        <span class="pill bad">Greška</span>
+        break;
+}

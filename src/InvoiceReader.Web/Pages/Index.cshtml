@@ -1,0 +1,53 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Klijenti";
+}
+<div class="page-head">
+    <h1>Klijenti</h1>
+    @if (Model.TotalWaiting > 0)
+    {
+        <a class="button primary" href="/Review">Pregledaj fakture (@Model.TotalWaiting)</a>
+    }
+</div>
+
+<div class="metrics">
+    <div class="metric"><span class="label">Čeka pregled</span><span class="value">@Model.TotalWaiting</span></div>
+    <div class="metric"><span class="label">AI čita</span><span class="value">@Model.TotalInProgress</span></div>
+    <div class="metric"><span class="label">Potvrđeno, za izvoz</span><span class="value">@Model.TotalConfirmed</span></div>
+</div>
+
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Klijent</th>
+                <th>ID broj</th>
+                <th class="num">Čeka pregled</th>
+                <th class="num">AI čita</th>
+                <th class="num">Potvrđeno</th>
+                <th class="num">Izvezeno</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model.Rows)
+            {
+                <tr>
+                    <td><a href="/Clients/@r.Id">@r.Name</a></td>
+                    <td class="mono">@r.TaxId</td>
+                    <td class="num">@if (r.Waiting > 0) { <span class="pill warn">@r.Waiting</span> } else { <span class="muted">0</span> }</td>
+                    <td class="num">@r.InProgress</td>
+                    <td class="num">@r.Confirmed</td>
+                    <td class="num">@r.Exported</td>
+                    <td class="actions">
+                        @if (r.Failed > 0) { <span class="pill bad">@r.Failed greška</span> }
+                        <a href="/Clients/@r.Id">Otvori</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<p class="hint">AI: @Model.AiName</p>

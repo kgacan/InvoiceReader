@@ -1,0 +1,98 @@
+[
+  {
+    "file": "01_energo_septembar.png",
+    "sha256": "953C3A133E3647947863874116681E6A6E0EDDB67E77AE8A8D86429E48CA8D26",
+    "answer": {
+      "supplier_name": "Energo Primjer d.o.o.",
+      "supplier_tax_id": "4200000001019",
+      "supplier_vat_number": "200000001019",
+      "invoice_number": "0912/2026",
+      "invoice_date": "2026-09-30",
+      "net_amount": 200.0,
+      "vat_amount": 34.0,
+      "total_amount": 234.0,
+      "currency": "BAM",
+      "confidence": 0.97
+    }
+  },
+  {
+    "file": "02_energo_oktobar.png",
+    "sha256": "2232135072D63315EE214EDB4185B9054773630F6BBDE2D1311D170F691AAC5D",
+    "answer": {
+      "supplier_name": "Energo Primjer d.o.o.",
+      "supplier_tax_id": "4200000001019",
+      "supplier_vat_number": "200000001019",
+      "invoice_number": "1007/2026",
+      "invoice_date": "2026-10-07",
+      "net_amount": 185.47,
+      "vat_amount": 31.53,
+      "total_amount": 217.0,
+      "currency": "BAM",
+      "confidence": 0.96
+    }
+  },
+  {
+    "file": "03_telekom_internet.png",
+    "sha256": "155DE0F94FF5E2A314525A5B2BF21606D2B34EC94C6D1491FC911EAEA9F43448",
+    "answer": {
+      "supplier_name": "Telekom Demo d.o.o.",
+      "supplier_tax_id": "4200000002023",
+      "supplier_vat_number": "200000002023",
+      "invoice_number": "TD-2026-55871",
+      "invoice_date": "2026-10-01",
+      "net_amount": 59.83,
+      "vat_amount": 10.17,
+      "total_amount": 70.0,
+      "currency": "BAM",
+      "confidence": 0.95
+    }
+  },
+  {
+    "file": "04_gorivo.jpg",
+    "sha256": "4E9FEB81A84E307F67EEBA3E640E172EEEC3027C318BBB9068921069D5B77062",
+    "answer": {
+      "supplier_name": "Gorivo Test d.o.o.",
+      "supplier_tax_id": "4200000003037",
+      "supplier_vat_number": "200000003037",
+      "invoice_number": "BS-118/4471",
+      "invoice_date": "2026-10-03",
+      "net_amount": 128.21,
+      "vat_amount": 21.8,
+      "total_amount": 150.01,
+      "currency": "BAM",
+      "confidence": 0.88
+    }
+  },
+  {
+    "file": "05_kancelarija_plus.png",
+    "sha256": "1C6A6BD0252698F5CE469CAC8E517BD539611EA40793733F10888B0DD441B78F",
+    "answer": {
+      "supplier_name": "Kancelarija Plus Demo d.o.o.",
+      "supplier_tax_id": "4200000004041",
+      "supplier_vat_number": "200000004041",
+      "invoice_number": "R-2026-0342",
+      "invoice_date": "2026-10-06",
+      "net_amount": 85.0,
+      "vat_amount": 14.45,
+      "total_amount": 99.45,
+      "currency": "BAM",
+      "confidence": 0.94
+    }
+  },
+  {
+    "file": "06_servis_klima.png",
+    "sha256": "C0FE208FD6CF0EC2A8FD62B7CCD3E70D67FF957C9E4EEFEAE494D0D103B85092",
+    "answer": {
+      "supplier_name": "Servis Klima Primjer d.o.o.",
+      "supplier_tax_id": "4200000005055",
+      "supplier_vat_number": "200000005055",
+      "invoice_number": "45/2026",
+      "invoice_date": "2026-10-08",
+      "net_amount": 200.0,
+      "vat_amount": 34.0,
+      "total_amount": 243.0,
+      "currency": "BAM",
+      "confidence": 0.74
+    }
+  }
+]

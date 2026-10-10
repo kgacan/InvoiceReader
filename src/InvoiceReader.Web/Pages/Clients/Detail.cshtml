@@ -1,0 +1,105 @@
+@page "/Clients/{id:int}"
+@model InvoiceReader.Web.Pages.Clients.DetailModel
+@{
+    ViewData["Title"] = Model.Client.Name;
+    var waiting = Model.Documents.Count(d => d.Status == DocumentStatus.NeedsReview);
+    var firstWaiting = Model.Documents.Where(d => d.Status == DocumentStatus.NeedsReview).OrderBy(d => d.Id).FirstOrDefault();
+}
+<p class="crumbs"><a href="/">Klijenti</a> / @Model.Client.Name</p>
+<div class="page-head">
+    <h1>@Model.Client.Name</h1>
+    @if (firstWaiting is not null)
+    {
+        <a class="button primary" href="/Review/@firstWaiting.Id">Pregledaj (@waiting)</a>
+    }
+</div>
+
+@if (Model.Message is not null)
+{
+    <p class="notice">@Model.Message</p>
+}
+
+<div class="grid-2">
+    <section class="card">
+        <h2>Link za klijenta</h2>
+        <p class="muted">Klijent otvori ovaj link na mobitelu i slika fakturu. Ne treba mu nalog.</p>
+        <div class="copy-row">
+            <input id="upload-url" type="text" readonly value="@Model.UploadUrl" />
+            <button type="button" data-copy="upload-url">Kopiraj</button>
+        </div>
+        <p><a href="@Model.UploadUrl" target="_blank" rel="noopener">Otvori stranicu klijenta</a></p>
+    </section>
+
+    <section class="card">
+        <h2>Učitaj fakture</h2>
+        <form method="post" asp-page-handler="Upload" asp-route-id="@Model.Client.Id" enctype="multipart/form-data" class="stack">
+            <label for="files">Slike ili PDF (više odjednom)</label>
+            <input id="files" name="files" type="file" multiple accept="@FileStore.AcceptAttribute" required />
+            <button type="submit" class="primary">Učitaj</button>
+        </form>
+        <form method="post" asp-page-handler="Samples" asp-route-id="@Model.Client.Id" class="inline">
+            <button type="submit">Dodaj primjere faktura za demo</button>
+        </form>
+    </section>
+</div>
+
+<h2>Dokumenti</h2>
+@if (Model.Documents.Count == 0)
+{
+    <p class="muted">Još nema dokumenata. Učitajte fakturu ili dodajte primjere za demo.</p>
+}
+else
+{
+    if (Model.Documents.Any(d => d.Status == DocumentStatus.Failed))
+    {
+        <form method="post" asp-page-handler="Retry" asp-route-id="@Model.Client.Id" class="inline">
+            <button type="submit">Pokušaj ponovo čitanje neuspjelih</button>
+        </form>
+    }
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Datoteka</th>
+                    <th>Status</th>
+                    <th>Dobavljač</th>
+                    <th>Broj računa</th>
+                    <th class="num">Ukupno</th>
+                    <th>Konto</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in Model.Documents)
+                {
+                    <tr>
+                        <td>@d.OriginalFileName</td>
+                        <td><partial name="_Status" model="d.Status" /></td>
+                        <td>@d.Invoice?.SupplierName</td>
+                        <td>@d.Invoice?.InvoiceNumber</td>
+                        <td class="num">@CsvExporter.Amount(d.Invoice?.TotalAmount)</td>
+                        <td class="mono">@d.Invoice?.AccountCode</td>
+                        <td class="actions">
+                            @if (d.Status is DocumentStatus.NeedsReview or DocumentStatus.Confirmed or DocumentStatus.Exported)
+                            {
+                                <a href="/Review/@d.Id">@(d.Status == DocumentStatus.NeedsReview ? "Pregledaj" : "Otvori")</a>
+                            }
+                            @if (d.Status == DocumentStatus.Failed)
+                            {
+                                <span class="muted small" title="@d.Error">@d.Error</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (Model.AnyInProgress)
+    {
+        <script>setTimeout(() => location.reload(), 3000);</script>
+    }
+}
