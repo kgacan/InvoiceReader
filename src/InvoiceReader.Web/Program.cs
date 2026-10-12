@@ -69,6 +69,7 @@ using (var scope = app.Services.CreateScope())
     // Demo: create the schema directly. For production, switch to EF Core migrations.
     await db.Database.EnsureCreatedAsync();
     await SeedData.EnsureSeededAsync(db);
+    await DemoInvoices.SeedAsync(db, scope.ServiceProvider.GetRequiredService<FileStore>(), app.Environment.ContentRootPath);
 }
 
 if (!app.Environment.IsDevelopment())

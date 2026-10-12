@@ -60,6 +60,12 @@ Never commit API keys. Use environment variables, `dotnet user-secrets`, or the 
 
 ## Demo scenario (5 minutes)
 
+On a fresh start the app fills in demo history (`Data/DemoInvoices.cs`): **Demo Pekara** has three
+confirmed invoices ready for export and one waiting for review, **Test Servis** has three exported
+for October 2026 and one waiting. Their accounts are learned office-wide, so the Telekom, fuel and
+office-supplies invoices are pre-filled for every client. **Primjer Market** starts empty for the
+walkthrough below.
+
 1. Log in. Open **Primjer Market d.o.o.**
 2. Click **Dodaj primjere faktura za demo**. Six invoices appear; the AI reads them in a few seconds.
 3. Click **Pregledaj**. Invoice on the left, fields on the right.
