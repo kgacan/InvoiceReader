@@ -1,0 +1,21 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# In Render: New > Blueprint, pick this repo. Every push to main deploys after GitHub CI passes.
+services:
+  - type: web
+    name: invoicereader
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeployTrigger: checksPass
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8080" # the container listens on 8080 (see Dockerfile)
+      - key: Demo__Email
+        value: demo@demo.ba
+      - key: Demo__Password
+        sync: false # asked for when the Blueprint is created; never committed
+      - key: Ai__Provider
+        value: Demo

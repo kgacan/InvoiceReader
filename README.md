@@ -73,9 +73,9 @@ Never commit API keys. Use environment variables, `dotnet user-secrets`, or the 
 
 The demo deploys as a Docker container. Two free options:
 
-**Render (simplest)**: push this repo to GitHub, then in Render create a *Web Service* from the repo
-(it finds the `Dockerfile`), pick the Free instance type, and add environment variables
-(`Demo__Password`, and AI keys if used). Limits of the free instance: it sleeps after 15 minutes
+**Render (simplest)**: the repo includes a Blueprint, `render.yaml` (free plan, Frankfurt, health
+check, deploys after GitHub CI passes). In Render choose *New > Blueprint*, pick this repo and enter a
+`Demo__Password` when asked. Add AI keys later under the service's *Environment*. Limits of the free instance: it sleeps after 15 minutes
 without traffic (first request then takes about a minute), and the file system is temporary, so the
 database and uploads reset on every restart or redeploy. For a demo that's fine: the app re-creates
 the demo data on start. Open the site a minute before showing it.
