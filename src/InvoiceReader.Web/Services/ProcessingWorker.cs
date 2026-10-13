@@ -146,14 +146,16 @@ public class ProcessingWorker : BackgroundService
         return true;
     }
 
-    /// <summary>One AI read, corrected against the known suppliers, then checked.</summary>
+    /// <summary>One AI read, ID derived from the VAT number if needed, matched to known suppliers, then checked.</summary>
     private static async Task<(ReadResult, List<string>)> ReadAndCheckAsync(IInvoiceReader reader, AppDbContext db, Document doc,
         byte[] bytes, IReadOnlyList<KnownSupplier> known, bool useStrongModel, DateOnly today, CancellationToken ct)
     {
         var read = await reader.ReadAsync(bytes, doc.ContentType, useStrongModel, ct);
-        var (inv, supplierNote) = KnownSuppliers.Apply(read.Invoice, known);
+        var (withId, idNote) = TaxIds.Reconcile(read.Invoice);
+        var (inv, supplierNote) = KnownSuppliers.Apply(withId, known);
         var warnings = InvoiceChecks.Run(inv, await IsDuplicateAsync(db, doc, inv, ct), today);
         if (supplierNote is not null) warnings.Insert(0, supplierNote);
+        if (idNote is not null) warnings.Insert(0, idNote);
         return (read with { Invoice = inv }, warnings);
     }
 

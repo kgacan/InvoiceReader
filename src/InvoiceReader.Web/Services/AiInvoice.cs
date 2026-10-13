@@ -32,7 +32,7 @@ public static class AiJson
         You read invoices from Bosnia and Herzegovina for an accounting office.
         Look at the attached invoice and return ONLY a JSON object, no other text, with these keys:
         "supplier_name": seller's company name,
-        "supplier_tax_id": seller's 13-digit ID number (ID broj / JIB), digits only,
+        "supplier_tax_id": seller's 13-digit ID number (ID broj / JIB) exactly as printed, digits only, or null if it is not printed (do not derive it from other numbers),
         "supplier_vat_number": seller's 12-digit VAT number (PDV broj), digits only, or null,
         "invoice_number": invoice number exactly as printed,
         "invoice_date": invoice date as YYYY-MM-DD,

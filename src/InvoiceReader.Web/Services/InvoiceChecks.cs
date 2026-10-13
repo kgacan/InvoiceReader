@@ -25,6 +25,9 @@ public static class InvoiceChecks
 
         if (inv.SupplierVatNumber is not null && inv.SupplierVatNumber.Length != 12)
             w.Add($"PDV broj dobavljača ima {inv.SupplierVatNumber.Length} cifara, očekivano 12.");
+        else if (TaxIds.IdFromVat(inv.SupplierVatNumber) is { } expectedId &&
+                 inv.SupplierTaxId is { Length: 13 } && inv.SupplierTaxId != expectedId)
+            w.Add($"ID broj i PDV broj se ne slažu: uz PDV broj {inv.SupplierVatNumber} ID broj treba biti {expectedId}. Provjerite oba.");
 
         if (inv.NetAmount is { } net && inv.VatAmount is { } vat && inv.TotalAmount is { } total)
         {
