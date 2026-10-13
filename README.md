@@ -13,6 +13,8 @@ All clients, suppliers and invoices in this demo are invented.
 | Database: SQLite via EF Core (file in `App_Data/invoices.db`) | `Data/` |
 | Background reader: AI read → checks → account suggestion | `Services/ProcessingWorker.cs` |
 | AI readers: Demo (no key), Claude, Gemini | `Services/Readers.cs` |
+| Supplier list from confirmed invoices: fixes a misread ID (one digit off, or matching VAT number) and fills in the confirmed name | `Services/KnownSuppliers.cs` |
+| Repeat uploads: a file identical to one already confirmed for the client reuses that data, no AI call | `Services/ProcessingWorker.cs` |
 | Maths and format checks (net + VAT = total, 17% VAT, 13-digit ID…) | `Services/InvoiceChecks.cs` |
 | Generic CSV export | `Services/CsvExporter.cs` |
 | Six fictional sample invoices | `SampleInvoices/` |

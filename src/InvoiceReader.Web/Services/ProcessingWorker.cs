@@ -69,18 +69,33 @@ public class ProcessingWorker : BackgroundService
             var bytes = await files.ReadAsync(doc, ct);
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-            var result = await reader.ReadAsync(bytes, doc.ContentType, useStrongModel: false, ct);
-            var warnings = InvoiceChecks.Run(result.Invoice, await IsDuplicateAsync(db, doc, result.Invoice, ct), today);
+            ReadResult result;
+            List<string> warnings;
+            string? earlierAccount = null;
 
-            // Second opinion from the stronger model when the cheap read looks wrong.
-            if (reader.HasStrongModel && InvoiceChecks.NeedsSecondOpinion(warnings))
+            // The same file was already confirmed for this client: reuse that data, no AI call.
+            var earlier = await FindSameFileAsync(db, doc, ct);
+            if (earlier is not null)
             {
-                var second = await reader.ReadAsync(bytes, doc.ContentType, useStrongModel: true, ct);
-                var secondWarnings = InvoiceChecks.Run(second.Invoice, await IsDuplicateAsync(db, doc, second.Invoice, ct), today);
-                if (secondWarnings.Count < warnings.Count)
+                result = new ReadResult(ToAiInvoice(earlier), earlier.RawJson, "ponovljena datoteka",
+                    $"Ista datoteka je već potvrđena (dokument {earlier.DocumentId}): podaci su preuzeti bez AI čitanja.");
+                warnings = InvoiceChecks.Run(result.Invoice, await IsDuplicateAsync(db, doc, result.Invoice, ct), today);
+                earlierAccount = earlier.AccountCode;
+            }
+            else
+            {
+                var known = await KnownSuppliers.LoadAsync(db, doc.OfficeId, ct);
+                (result, warnings) = await ReadAndCheckAsync(reader, db, doc, bytes, known, useStrongModel: false, today, ct);
+
+                // Second opinion from the stronger model when the cheap read looks wrong.
+                if (reader.HasStrongModel && InvoiceChecks.NeedsSecondOpinion(warnings))
                 {
-                    result = second;
-                    warnings = secondWarnings;
+                    var (second, secondWarnings) = await ReadAndCheckAsync(reader, db, doc, bytes, known, useStrongModel: true, today, ct);
+                    if (secondWarnings.Count < warnings.Count)
+                    {
+                        result = second;
+                        warnings = secondWarnings;
+                    }
                 }
             }
 
@@ -105,10 +120,11 @@ public class ProcessingWorker : BackgroundService
                 Warnings = string.Join('\n', warnings)
             };
 
-            var rule = await AccountRules.FindAsync(db, doc.OfficeId, doc.ClientId, inv.SupplierTaxId, ct);
-            if (rule is not null)
+            var account = earlierAccount ??
+                          (await AccountRules.FindAsync(db, doc.OfficeId, doc.ClientId, inv.SupplierTaxId, ct))?.AccountCode;
+            if (account is not null)
             {
-                data.AccountCode = rule.AccountCode;
+                data.AccountCode = account;
                 data.AccountSuggested = true;
             }
 
@@ -129,6 +145,41 @@ public class ProcessingWorker : BackgroundService
 
         return true;
     }
+
+    /// <summary>One AI read, corrected against the known suppliers, then checked.</summary>
+    private static async Task<(ReadResult, List<string>)> ReadAndCheckAsync(IInvoiceReader reader, AppDbContext db, Document doc,
+        byte[] bytes, IReadOnlyList<KnownSupplier> known, bool useStrongModel, DateOnly today, CancellationToken ct)
+    {
+        var read = await reader.ReadAsync(bytes, doc.ContentType, useStrongModel, ct);
+        var (inv, supplierNote) = KnownSuppliers.Apply(read.Invoice, known);
+        var warnings = InvoiceChecks.Run(inv, await IsDuplicateAsync(db, doc, inv, ct), today);
+        if (supplierNote is not null) warnings.Insert(0, supplierNote);
+        return (read with { Invoice = inv }, warnings);
+    }
+
+    /// <summary>A confirmed invoice of the same client with exactly the same file (SHA-256).</summary>
+    private static Task<InvoiceData?> FindSameFileAsync(AppDbContext db, Document doc, CancellationToken ct) =>
+        db.Invoices
+            .Where(i => i.Document!.ClientId == doc.ClientId &&
+                        i.DocumentId != doc.Id &&
+                        i.Document.Sha256 == doc.Sha256 &&
+                        (i.Document.Status == DocumentStatus.Confirmed || i.Document.Status == DocumentStatus.Exported))
+            .OrderByDescending(i => i.ConfirmedAt)
+            .FirstOrDefaultAsync(ct);
+
+    private static AiInvoice ToAiInvoice(InvoiceData i) => new()
+    {
+        SupplierName = i.SupplierName,
+        SupplierTaxId = i.SupplierTaxId,
+        SupplierVatNumber = i.SupplierVatNumber,
+        InvoiceNumber = i.InvoiceNumber,
+        InvoiceDate = i.InvoiceDate,
+        NetAmount = i.NetAmount,
+        VatAmount = i.VatAmount,
+        TotalAmount = i.TotalAmount,
+        Currency = i.Currency,
+        Confidence = 1
+    };
 
     private static Task<bool> IsDuplicateAsync(AppDbContext db, Document doc, AiInvoice inv, CancellationToken ct)
     {
