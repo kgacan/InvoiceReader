@@ -22,6 +22,6 @@ services:
       - key: Ai__Provider
         value: Gemini
       - key: Ai__GeminiModel
-        value: gemini-3.8-flash
+        value: gemini-3.5-flash-lite # fast; minimal thinking by default
       - key: Ai__GeminiApiKey
         sync: false # set in Render > Environment; without it the app falls back to Demo mode

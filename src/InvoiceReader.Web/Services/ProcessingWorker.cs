@@ -63,6 +63,7 @@ public class ProcessingWorker : BackgroundService
         doc.Status = DocumentStatus.Reading;
         await db.SaveChangesAsync(ct);
 
+        var started = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             var bytes = await files.ReadAsync(doc, ct);
@@ -115,11 +116,12 @@ public class ProcessingWorker : BackgroundService
             doc.Status = DocumentStatus.NeedsReview;
             doc.Error = null;
             await db.SaveChangesAsync(ct);
-            _log.LogInformation("Read document {Id} with {Model}, {Count} warnings", doc.Id, result.ModelUsed, warnings.Count);
+            _log.LogInformation("Read document {Id} ({Kb} KB) with {Model} in {Seconds:0.0} s, {Count} warnings",
+                doc.Id, bytes.Length / 1024, result.ModelUsed, started.Elapsed.TotalSeconds, warnings.Count);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _log.LogWarning(ex, "Reading document {Id} failed", doc.Id);
+            _log.LogWarning(ex, "Reading document {Id} failed after {Seconds:0.0} s", doc.Id, started.Elapsed.TotalSeconds);
             doc.Status = DocumentStatus.Failed;
             doc.Error = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
             await db.SaveChangesAsync(CancellationToken.None);
