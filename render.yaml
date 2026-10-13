@@ -17,5 +17,11 @@ services:
         value: demo@demo.ba
       - key: Demo__Password
         sync: false # asked for when the Blueprint is created; never committed
+      # Gemini free tier: Google may use the files to improve its products, so only send
+      # invoices you are allowed to share (never client documents). Paid AI: switch to Claude.
       - key: Ai__Provider
-        value: Demo
+        value: Gemini
+      - key: Ai__GeminiModel
+        value: gemini-3.8-flash
+      - key: Ai__GeminiApiKey
+        sync: false # set in Render > Environment; without it the app falls back to Demo mode
