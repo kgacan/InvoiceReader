@@ -14,6 +14,30 @@ public class Office
 
     /// <summary>Account for domestic suppliers (example value, each office sets its own).</summary>
     public string SuppliersAccount { get; set; } = "";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Someone who logs in: an accountant of one office, or the app owner (IsAdmin).</summary>
+public class User
+{
+    public int Id { get; set; }
+    public int OfficeId { get; set; }
+    public Office? Office { get; set; }
+
+    /// <summary>Always stored trimmed and lower-case (see UserAccounts.NormalizeEmail).</summary>
+    public string Email { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string PasswordHash { get; set; } = "";
+
+    /// <summary>Changes with every new password, which logs out sessions that used the old one.</summary>
+    public string SecurityStamp { get; set; } = "";
+
+    /// <summary>The app owner: manages offices and users on /Admin.</summary>
+    public bool IsAdmin { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastLoginAt { get; set; }
 }
 
 /// <summary>A firm whose books the office keeps.</summary>

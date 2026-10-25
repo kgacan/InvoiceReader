@@ -7,6 +7,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Office> Offices => Set<Office>();
+    public DbSet<User> Users => Set<User>();
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<InvoiceData> Invoices => Set<InvoiceData>();
@@ -16,6 +17,8 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.Entity<User>().HasIndex(u => u.Email).IsUnique();
+
         b.Entity<Client>().HasIndex(c => c.UploadToken).IsUnique();
 
         b.Entity<Document>()

@@ -1,0 +1,94 @@
+@page
+@model AdminModel
+@{
+    ViewData["Title"] = "Administracija";
+}
+<div class="page-head">
+    <h1>Administracija</h1>
+</div>
+
+@if (Model.Message is not null)
+{
+    <p class="notice">@Model.Message</p>
+}
+@if (Model.NewLogin is not null)
+{
+    <section class="card">
+        <h2>Pristupni podaci</h2>
+        <p>Pošaljite ih računovođi. Lozinka se prikazuje samo sada; poslije prve prijave može je promijeniti.</p>
+        <div class="copy-row">
+            <input id="new-login" type="text" readonly value="@Model.NewLogin" class="mono" />
+            <button type="button" data-copy="new-login">Kopiraj</button>
+        </div>
+    </section>
+}
+
+<h2>Uredi</h2>
+@foreach (var row in Model.Offices)
+{
+    <section class="card">
+        <h2>@row.Office.Name</h2>
+        <p class="muted small">
+            Klijenata: @row.Clients · Dokumenata ovaj mjesec: @row.DocumentsThisMonth ·
+            Napravljen: @row.Office.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")
+        </p>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Korisnik</th><th>Zadnja prijava</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var u in row.Users)
+                    {
+                        <tr>
+                            <td>@u.Name<br /><span class="muted small mono">@u.Email</span></td>
+                            <td class="small">@(u.LastLoginAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "nikad")</td>
+                            <td>
+                                @if (!u.IsActive) { <span class="pill bad">Isključen</span> }
+                                else if (u.IsAdmin) { <span class="pill info">Admin</span> }
+                                else { <span class="pill ok">Aktivan</span> }
+                            </td>
+                            <td class="actions">
+                                <form method="post" asp-page-handler="ResetPassword" asp-route-userId="@u.Id" class="inline">
+                                    <button type="submit" class="link">Nova lozinka</button>
+                                </form>
+                                @if (u.Id != Model.CurrentUserId)
+                                {
+                                    <form method="post" asp-page-handler="ToggleActive" asp-route-userId="@u.Id" class="inline">
+                                        <button type="submit" class="link">@(u.IsActive ? "Isključi" : "Uključi")</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <details>
+            <summary>Dodaj korisnika u ovaj ured</summary>
+            <form method="post" asp-page-handler="AddUser" asp-route-officeId="@row.Office.Id" class="stack">
+                <label for="email-@row.Office.Id">Email</label>
+                <input id="email-@row.Office.Id" name="email" type="email" required />
+                <label for="name-@row.Office.Id">Ime i prezime</label>
+                <input id="name-@row.Office.Id" name="name" />
+                <button type="submit">Dodaj korisnika</button>
+            </form>
+        </details>
+    </section>
+}
+
+<section class="card narrow">
+    <h2>Novi ured</h2>
+    <p class="muted small">Napravi ured i prvi nalog s automatskom lozinkom.</p>
+    <form method="post" asp-page-handler="CreateOffice" class="stack">
+        <label for="office-name">Naziv ureda</label>
+        <input id="office-name" name="officeName" required />
+        <label for="office-email">Email računovođe</label>
+        <input id="office-email" name="email" type="email" required />
+        <label for="office-user">Ime i prezime</label>
+        <input id="office-user" name="name" />
+        <button type="submit" class="primary">Napravi ured</button>
+    </form>
+</section>
+
+@section Scripts {
+    <script src="~/js/site.js" asp-append-version="true"></script>
+}

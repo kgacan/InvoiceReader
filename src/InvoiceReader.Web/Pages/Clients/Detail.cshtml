@@ -37,16 +37,19 @@
             <input id="files" name="files" type="file" multiple accept="@FileStore.AcceptAttribute" required />
             <button type="submit" class="primary">Učitaj</button>
         </form>
-        <form method="post" asp-page-handler="Samples" asp-route-id="@Model.Client.Id" class="inline">
-            <button type="submit">Dodaj primjere faktura za demo</button>
-        </form>
+        @if (Mode.IsDemo)
+        {
+            <form method="post" asp-page-handler="Samples" asp-route-id="@Model.Client.Id" class="inline">
+                <button type="submit">Dodaj primjere faktura za demo</button>
+            </form>
+        }
     </section>
 </div>
 
 <h2>Dokumenti</h2>
 @if (Model.Documents.Count == 0)
 {
-    <p class="muted">Još nema dokumenata. Učitajte fakturu ili dodajte primjere za demo.</p>
+    <p class="muted">Još nema dokumenata. @(Mode.IsDemo ? "Učitajte fakturu ili dodajte primjere za demo." : "Učitajte fakturu ili pošaljite link klijentu.")</p>
 }
 else
 {

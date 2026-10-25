@@ -4,8 +4,9 @@ using InvoiceReader.Web.Data;
 namespace InvoiceReader.Web.Services;
 
 /// <summary>
-/// Saves uploaded files to local disk (DataDir/uploads). For production, swap this for
-/// private cloud storage (e.g. Azure Blob or S3-compatible) behind the same methods.
+/// Saves uploaded files to local disk (DataDir/uploads). Paths in the database are relative to
+/// that folder, so the data folder can move (e.g. onto a mounted disk). For many offices, swap
+/// this for private cloud storage (e.g. Azure Blob or S3-compatible) behind the same methods.
 /// </summary>
 public class FileStore
 {
@@ -29,6 +30,12 @@ public class FileStore
         Directory.CreateDirectory(_root);
     }
 
+    internal FileStore(string uploadsRoot)
+    {
+        _root = uploadsRoot;
+        Directory.CreateDirectory(_root);
+    }
+
     public static string AcceptAttribute => string.Join(",", Allowed.Keys);
 
     /// <summary>Validates and stores a file; returns a new Document (not yet saved to the DB) or an error.</summary>
@@ -44,10 +51,9 @@ public class FileStore
         await content.CopyToAsync(ms);
         var bytes = ms.ToArray();
 
-        var dir = Path.Combine(_root, officeId.ToString());
-        Directory.CreateDirectory(dir);
-        var stored = Path.Combine(dir, $"{Guid.NewGuid():N}{ext.ToLowerInvariant()}");
-        await File.WriteAllBytesAsync(stored, bytes);
+        Directory.CreateDirectory(Path.Combine(_root, officeId.ToString()));
+        var stored = $"{officeId}/{Guid.NewGuid():N}{ext.ToLowerInvariant()}";
+        await File.WriteAllBytesAsync(Path.Combine(_root, stored), bytes);
 
         return (new Document
         {
@@ -62,5 +68,9 @@ public class FileStore
         }, null);
     }
 
-    public Task<byte[]> ReadAsync(Document doc, CancellationToken ct) => File.ReadAllBytesAsync(doc.StoredPath, ct);
+    /// <summary>Where the file is on disk. Rows from before relative paths hold an absolute path, used as it is.</summary>
+    public string FullPath(Document doc) =>
+        Path.IsPathRooted(doc.StoredPath) ? doc.StoredPath : Path.Combine(_root, doc.StoredPath);
+
+    public Task<byte[]> ReadAsync(Document doc, CancellationToken ct) => File.ReadAllBytesAsync(FullPath(doc), ct);
 }

@@ -1,19 +1,28 @@
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using InvoiceReader.Web.Data;
+using InvoiceReader.Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 
 namespace InvoiceReader.Web.Pages;
 
+[EnableRateLimiting("login")]
 public class LoginModel : PageModel
 {
+    private readonly AppDbContext _db;
     private readonly IConfiguration _config;
 
-    public LoginModel(IConfiguration config) => _config = config;
+    public LoginModel(AppDbContext db, IConfiguration config, AppMode mode)
+    {
+        _db = db;
+        _config = config;
+        Mode = mode;
+    }
+
+    public AppMode Mode { get; }
 
     [BindProperty] public string Email { get; set; } = "";
     [BindProperty] public string Password { get; set; } = "";
@@ -24,33 +33,25 @@ public class LoginModel : PageModel
 
     public void OnGet()
     {
-        Email = DemoEmail;
+        if (Mode.IsDemo) Email = DemoEmail;
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var okEmail = string.Equals(Email.Trim(), DemoEmail, StringComparison.OrdinalIgnoreCase);
-        var okPassword = FixedTimeEquals(Password, _config["Demo:Password"] ?? "");
-        if (!okEmail || !okPassword)
+        var email = UserAccounts.NormalizeEmail(Email);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email && u.IsActive);
+        if (user is null || !UserAccounts.CheckPassword(user, Password))
         {
             Error = "Pogrešan email ili lozinka.";
             return Page();
         }
 
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.Name, DemoEmail),
-            new(UserExtensions.OfficeClaim, SeedData.DemoOfficeId.ToString())
-        };
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity),
+        user.LastLoginAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, UserAccounts.ToPrincipal(user),
             new AuthenticationProperties { IsPersistent = true });
 
         return LocalRedirect(Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : "/");
     }
-
-    private static bool FixedTimeEquals(string a, string b) =>
-        CryptographicOperations.FixedTimeEquals(
-            SHA256.HashData(Encoding.UTF8.GetBytes(a)),
-            SHA256.HashData(Encoding.UTF8.GetBytes(b)));
 }

@@ -1,5 +1,6 @@
 # Render Blueprint: https://render.com/docs/blueprint-spec
 # In Render: New > Blueprint, pick this repo. Every push to main deploys after GitHub CI passes.
+# This is the free DEMO (invented data, resets on restart). Real offices: render-pilot.yaml.
 services:
   - type: web
     name: invoicereader
@@ -13,6 +14,8 @@ services:
     envVars:
       - key: PORT
         value: "8080" # the container listens on 8080 (see Dockerfile)
+      - key: Mode
+        value: Demo
       - key: Demo__Email
         value: demo@demo.ba
       - key: Demo__Password

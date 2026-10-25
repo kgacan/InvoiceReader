@@ -11,15 +11,19 @@
     {
         var path = Context.Request.Path.Value ?? "/";
         <header class="topbar">
-            <a class="brand" href="/">Čitač faktura <span class="demo-tag">demo</span></a>
+            <a class="brand" href="/">Čitač faktura @if (Mode.IsDemo) { <span class="demo-tag">demo</span> }</a>
             <nav>
                 <a href="/" class="@(path == "/" || path.StartsWith("/Clients") ? "active" : "")">Klijenti</a>
                 <a href="/Review" class="@(path.StartsWith("/Review") ? "active" : "")">Za pregled</a>
                 <a href="/Export" class="@(path.StartsWith("/Export") ? "active" : "")">Izvoz</a>
                 <a href="/Settings" class="@(path.StartsWith("/Settings") ? "active" : "")">Postavke</a>
+                @if (User.IsAdmin())
+                {
+                    <a href="/Admin" class="@(path.StartsWith("/Admin") ? "active" : "")">Administracija</a>
+                }
             </nav>
             <form method="post" asp-page="/Logout" class="logout">
-                <span class="muted">@User.Identity.Name</span>
+                <a href="/Password" class="muted" title="Promjena lozinke">@User.Identity.Name</a>
                 <button type="submit" class="link">Odjava</button>
             </form>
         </header>

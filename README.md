@@ -1,16 +1,19 @@
-# Čitač faktura (invoice reader) — demo
+# Čitač faktura (invoice reader)
 
-A demo web app for accounting offices: clients send photos or PDFs of invoices, AI reads them,
+A web app for accounting offices: clients send photos or PDFs of invoices, AI reads them,
 the accountant checks and confirms, and the app exports a file for the office's accounting program.
 
-All clients, suppliers and invoices in this demo are invented.
+It runs in one of two modes (see [Demo and pilot](#demo-and-pilot)): a **demo** with invented
+clients, suppliers and invoices, or a **pilot** for real offices with their own logins.
 
 ## What's inside
 
 | Part | Where |
 | --- | --- |
 | ASP.NET Core 8 Razor Pages app | `src/InvoiceReader.Web` |
-| Database: SQLite via EF Core (file in `App_Data/invoices.db`) | `Data/` |
+| Database: SQLite via EF Core (file in `App_Data/invoices.db`), schema by EF Core migrations, applied on start | `Data/`, `Data/Migrations/`, `Data/DatabaseSetup.cs` |
+| Demo or pilot mode | `Services/AppMode.cs` |
+| Logins: users per office, hashed passwords, password change, login rate limit; owner's admin page for offices and users | `Services/UserAccounts.cs`, `Pages/Login`, `Pages/Password`, `Pages/Admin` |
 | Background reader: AI read → checks → account suggestion | `Services/ProcessingWorker.cs` |
 | AI readers: Demo (no key), Claude, Gemini | `Services/Readers.cs` |
 | Supplier list from confirmed invoices: fixes a misread ID (one digit off, or matching VAT number) and fills in the confirmed name | `Services/KnownSuppliers.cs` |
@@ -20,6 +23,8 @@ All clients, suppliers and invoices in this demo are invented.
 | Six fictional sample invoices | `SampleInvoices/` |
 | Unit tests (xUnit) | `tests/InvoiceReader.Tests` |
 | CI (build, test, Docker build) | `.github/workflows/ci.yml` |
+| Container, start script, database backup (Litestream) | `Dockerfile`, `deploy/` |
+| Render Blueprints: free demo, paid pilot | `render.yaml`, `render-pilot.yaml` |
 
 Screens (UI is in Bosnian): login, clients, client page with upload link, review (invoice left,
 fields right), export, settings (chart of accounts, clients), and the client's public upload page `/u/{token}`.
@@ -40,6 +45,36 @@ Run the tests from the repository root:
 
 ```bash
 dotnet test
+```
+
+After changing an entity in `Data/`, add a migration (the test suite fails until you do):
+
+```bash
+dotnet tool restore
+dotnet ef migrations add NameOfTheChange --project src/InvoiceReader.Web --output-dir Data/Migrations
+```
+
+## Demo and pilot
+
+Set `Mode` in `appsettings.json` or as an environment variable.
+
+| | `Mode=Demo` (default) | `Mode=Pilot` |
+| --- | --- | --- |
+| Data | Invented demo office, clients and invoice history, added on start | Nothing invented, ever |
+| Demo login (`Demo:Email` / `Demo:Password`) | Yes | No |
+| "Dodaj primjere faktura za demo" button | Yes | No |
+| AI | Any, including Demo mode without a key | A real provider with a key, or the app refuses to start |
+
+In both modes, `Admin:Email` and `Admin:Password` (at least 10 characters) create **your own login**
+on the first start, in an office of its own. That login sees **Administracija**: create an office with its
+first accountant, add more users, reset a password, or switch a user off. New passwords are generated and
+shown once, to pass on; users change them under their name in the top bar. A reset or a switched-off
+user is logged out everywhere. The admin password from configuration is only used the first time.
+
+Try the pilot locally (any folder for `DataDir`; the AI key must be real for invoices to be read):
+
+```powershell
+dotnet run --project src/InvoiceReader.Web -- --Mode Pilot --DataDir C:/temp/pilot --Ai:Provider Claude --Ai:ClaudeApiKey sk-ant-... --Admin:Email you@example.com --Admin:Password "a-long-password"
 ```
 
 ## AI modes
@@ -77,9 +112,12 @@ walkthrough below.
 7. **Izvoz**: pick the client and October 2026, download the CSV, open it in Excel.
 8. Show the client side: copy the upload link from the client page and open it on a phone.
 
-## Free deployment
+## Deployment
 
-The demo deploys as a Docker container. Two free options:
+The app deploys as a Docker container. All its data (database, uploads, the keys that encrypt login
+cookies) lives in `DataDir`, `/app/data` in the container.
+
+### Free demo
 
 **Render (simplest)**: the repo includes a Blueprint, `render.yaml` (free plan, Frankfurt, health
 check, deploys after GitHub CI passes). In Render choose *New > Blueprint*, pick this repo and enter a
@@ -91,13 +129,39 @@ the demo data on start. Open the site a minute before showing it.
 **Azure App Service Free (F1)**: also runs .NET for free with a daily CPU quota; good if you prefer
 staying in the Microsoft ecosystem.
 
-Before real customers: move to a paid plan with persistent storage, switch SQLite to PostgreSQL
-(e.g. Supabase in Frankfurt; change `UseSqlite` to `UseNpgsql`), add EF Core migrations instead of
-`EnsureCreated`, real user accounts, and private cloud storage for files.
+### Pilot with real offices
 
-## What's deliberately left out of the demo
+`render-pilot.yaml` is a second Blueprint (in Render: *New > Blueprint*, this repo, **Blueprint Path**
+`render-pilot.yaml`). It is kept out of `render.yaml` on purpose, because it **costs money**: a Starter
+instance (about $7/month) with a 1 GB persistent disk (about $0.25/GB/month) mounted at `/app/data`.
+Render asks for:
 
-- Real user accounts and multiple offices (the data model already has `OfficeId` everywhere)
+- `Admin__Email`, `Admin__Password`: your login.
+- `Ai__ClaudeApiKey`: a paid Anthropic key. Set a monthly spend limit in the Anthropic Console. Haiku
+  reads an invoice for a fraction of a cent.
+- `LITESTREAM_*` (optional, recommended): off-site database backup, below. Leave `LITESTREAM_BUCKET`
+  empty to turn it off.
+
+With a disk, Render stops the old instance before starting the new one, so each deploy has a short
+downtime and the service runs as one instance. That's fine for a pilot.
+
+**Database backup (Litestream)**: with `LITESTREAM_BUCKET` set, `deploy/docker-entrypoint.sh` runs the
+app under [Litestream](https://litestream.io), which copies every database change to S3-compatible
+storage and keeps 7 days of history. On an empty disk it first restores the latest backup. For Cloudflare
+R2 (10 GB free): create a bucket and an R2 API token, then set `LITESTREAM_BUCKET`, `LITESTREAM_ENDPOINT`
+(`https://<account id>.r2.cloudflarestorage.com`), `LITESTREAM_ACCESS_KEY_ID` and
+`LITESTREAM_SECRET_ACCESS_KEY`; `LITESTREAM_REGION` is `auto`. Litestream backs up the database only, not
+the uploaded files; for those rely on the host's disk snapshots (check what your Render plan keeps).
+
+The same image runs on any Docker host (e.g. a small Hetzner VPS in Germany behind Caddy for HTTPS):
+mount a volume at `/app/data` and pass the same environment variables.
+
+Later, with many offices: PostgreSQL instead of SQLite (change `UseSqlite` to `UseNpgsql` and create a
+fresh migration) and private cloud storage for files behind `FileStore`.
+
+## What's deliberately left out
+
+- Self-service sign-up and "forgot password" emails (the owner creates offices and resets passwords on Administracija)
 - Image resizing before AI (the AI APIs downscale large images themselves)
 - Exporters for specific accounting programs (one class per program, next to `CsvExporter`)
 - Bank statements, reminders to clients, billing

@@ -11,12 +11,14 @@ public class DetailModel : PageModel
     private readonly AppDbContext _db;
     private readonly FileStore _files;
     private readonly IWebHostEnvironment _env;
+    private readonly AppMode _mode;
 
-    public DetailModel(AppDbContext db, FileStore files, IWebHostEnvironment env)
+    public DetailModel(AppDbContext db, FileStore files, IWebHostEnvironment env, AppMode mode)
     {
         _db = db;
         _files = files;
         _env = env;
+        _mode = mode;
     }
 
     public Client Client { get; private set; } = null!;
@@ -57,7 +59,7 @@ public class DetailModel : PageModel
     /// <summary>Demo helper: adds the bundled sample invoices to this client.</summary>
     public async Task<IActionResult> OnPostSamplesAsync(int id)
     {
-        if (!await LoadAsync(id)) return NotFound();
+        if (!_mode.IsDemo || !await LoadAsync(id)) return NotFound();
 
         var dir = Path.Combine(_env.ContentRootPath, "SampleInvoices");
         var samples = Directory.Exists(dir)

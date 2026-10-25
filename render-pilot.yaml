@@ -1,0 +1,45 @@
+# Render Blueprint for the PILOT: real offices, real invoices, data kept on a persistent disk.
+# In Render: New > Blueprint, pick this repo and set "Blueprint Path" to render-pilot.yaml.
+# Costs money: a disk needs a paid instance (Starter, about $7/month, plus about $0.25/GB/month for the disk).
+# Kept apart from render.yaml so the free demo never creates this paid service by accident.
+services:
+  - type: web
+    name: invoicereader-pilot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: frankfurt
+    branch: main
+    autoDeployTrigger: checksPass
+    healthCheckPath: /health
+    disk:
+      name: data
+      mountPath: /app/data # = DataDir in the Dockerfile: database, uploads, login keys
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: Mode
+        value: Pilot # no demo data, no demo login; the app refuses to start without a real AI key
+      # Your own login (the app owner). Created on the first start; change the password in the app afterwards.
+      - key: Admin__Email
+        sync: false
+      - key: Admin__Password
+        sync: false # at least 10 characters
+      - key: Ai__Provider
+        value: Claude
+      - key: Ai__ClaudeApiKey
+        sync: false # paid API key; set a monthly spend limit in the Anthropic Console
+      # Optional off-site backup of the database with Litestream (deploy/litestream.yml).
+      # Leave LITESTREAM_BUCKET empty to turn it off. Cloudflare R2: endpoint
+      # https://<account id>.r2.cloudflarestorage.com, region auto, and an R2 API token's keys.
+      - key: LITESTREAM_BUCKET
+        sync: false
+      - key: LITESTREAM_ENDPOINT
+        sync: false
+      - key: LITESTREAM_REGION
+        value: auto
+      - key: LITESTREAM_ACCESS_KEY_ID
+        sync: false
+      - key: LITESTREAM_SECRET_ACCESS_KEY
+        sync: false

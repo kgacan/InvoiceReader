@@ -1,19 +1,37 @@
 using System.Security.Cryptography;
+using InvoiceReader.Web.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace InvoiceReader.Web.Data;
 
 /// <summary>
-/// Fills an empty database with one demo office, three fictional clients and an
-/// EXAMPLE chart of accounts. All names and numbers are invented for the demo.
+/// Demo mode only: one demo office, three fictional clients, an EXAMPLE chart of accounts and
+/// the demo login. All names and numbers are invented for the demo.
 /// </summary>
 public static class SeedData
 {
     public const int DemoOfficeId = 1;
 
-    public static async Task EnsureSeededAsync(AppDbContext db)
+    /// <summary>The demo login always matches Demo:Email / Demo:Password from configuration.</summary>
+    public static async Task EnsureDemoUserAsync(AppDbContext db, string email, string password)
     {
-        if (await db.Offices.AnyAsync()) return;
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrEmpty(password)) return;
+        email = UserAccounts.NormalizeEmail(email);
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user is null)
+        {
+            user = new User { OfficeId = DemoOfficeId, Email = email, Name = email };
+            db.Users.Add(user);
+        }
+        if (!UserAccounts.CheckPassword(user, password)) UserAccounts.SetPassword(user, password);
+        user.IsActive = true;
+        await db.SaveChangesAsync();
+    }
+
+    public static async Task EnsureDemoOfficeAsync(AppDbContext db)
+    {
+        if (await db.Offices.AnyAsync(o => o.Id == DemoOfficeId)) return;
 
         var office = new Office
         {

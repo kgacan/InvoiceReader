@@ -1,0 +1,13 @@
+# Continuous backup of the SQLite database to S3-compatible storage (Cloudflare R2, Backblaze B2,
+# AWS S3). Used only when LITESTREAM_BUCKET is set. Litestream fills in the ${...} values from
+# environment variables and reads LITESTREAM_ACCESS_KEY_ID / LITESTREAM_SECRET_ACCESS_KEY itself.
+dbs:
+  - path: ${LITESTREAM_DB_PATH}
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_BUCKET}
+        path: invoices.db
+        endpoint: ${LITESTREAM_ENDPOINT} # R2: https://<account id>.r2.cloudflarestorage.com
+        region: ${LITESTREAM_REGION}     # R2: auto
+        force-path-style: true
+        retention: 168h                  # restore to any point in the last 7 days
