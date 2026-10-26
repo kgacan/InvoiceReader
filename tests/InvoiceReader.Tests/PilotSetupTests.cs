@@ -64,15 +64,16 @@ public sealed class PilotSetupTests : IDisposable
     public async Task Files_are_stored_relative_to_the_uploads_folder()
     {
         var store = new FileStore(Path.Combine(_dir, "uploads"));
-        using var content = new MemoryStream(new byte[] { 1, 2, 3 });
+        var pdf = "%PDF-1.4 test"u8.ToArray();
+        using var content = new MemoryStream(pdf);
 
-        var (doc, error) = await store.SaveAsync(content, "Faktura.PNG", content.Length, officeId: 7, clientId: 1);
+        var (doc, error) = await store.SaveAsync(content, "Faktura.PDF", content.Length, officeId: 7, clientId: 1);
 
         Assert.Null(error);
         Assert.False(Path.IsPathRooted(doc!.StoredPath));
         Assert.StartsWith("7/", doc.StoredPath);
-        Assert.EndsWith(".png", doc.StoredPath);
-        Assert.Equal(new byte[] { 1, 2, 3 }, await store.ReadAsync(doc, CancellationToken.None));
+        Assert.EndsWith(".pdf", doc.StoredPath);
+        Assert.Equal(pdf, await store.ReadAsync(doc, CancellationToken.None));
 
         // Rows from before relative paths keep working.
         var legacy = new Document { StoredPath = store.FullPath(doc) };

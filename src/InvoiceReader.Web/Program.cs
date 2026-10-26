@@ -107,9 +107,9 @@ builder.Services.AddRazorPages(o =>
     o.Conventions.AllowAnonymousToPage("/Error");
 });
 
-// Several phone photos in one upload.
-builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = 60 * 1024 * 1024);
-builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 60 * 1024 * 1024);
+// Several full-size phone photos in one upload (they are made small when stored).
+builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = 120 * 1024 * 1024);
+builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 120 * 1024 * 1024);
 
 var app = builder.Build();
 

@@ -18,6 +18,7 @@ clients, suppliers and invoices, or a **pilot** for real offices with their own 
 | AI readers: Demo (no key), Claude, Gemini | `Services/Readers.cs` |
 | Supplier list from confirmed invoices: fixes a misread ID (one digit off, or matching VAT number) and fills in the confirmed name | `Services/KnownSuppliers.cs` |
 | Repeat uploads: a file identical to one already confirmed for the client reuses that data, no AI call | `Services/ProcessingWorker.cs` |
+| Uploaded photos made small (max 2000 px, JPEG, turned upright, EXIF/GPS dropped); photos up to 25 MB, PDFs up to 7 MB | `Services/ImageShrinker.cs`, `Services/FileStore.cs` |
 | Maths and format checks (net + VAT = total, 17% VAT, 13-digit ID…) | `Services/InvoiceChecks.cs` |
 | Generic CSV export | `Services/CsvExporter.cs` |
 | Six fictional sample invoices | `SampleInvoices/` |
@@ -162,6 +163,6 @@ fresh migration) and private cloud storage for files behind `FileStore`.
 ## What's deliberately left out
 
 - Self-service sign-up and "forgot password" emails (the owner creates offices and resets passwords on Administracija)
-- Image resizing before AI (the AI APIs downscale large images themselves)
+- Resizing photos in the browser before upload (would save mobile data; today the server does it)
 - Exporters for specific accounting programs (one class per program, next to `CsvExporter`)
 - Bank statements, reminders to clients, billing

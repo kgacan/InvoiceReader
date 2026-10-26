@@ -10,7 +10,10 @@ namespace InvoiceReader.Web.Services;
 /// </summary>
 public class FileStore
 {
-    public const long MaxBytes = 7 * 1024 * 1024; // the AI APIs accept roughly this size
+    public const long MaxPdfBytes = 7 * 1024 * 1024; // the AI APIs accept roughly this size
+
+    /// <summary>Photos are made small before storing (ImageShrinker), so the original may be bigger.</summary>
+    public const long MaxImageBytes = 25 * 1024 * 1024;
 
     private static readonly Dictionary<string, string> Allowed = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -38,21 +41,40 @@ public class FileStore
 
     public static string AcceptAttribute => string.Join(",", Allowed.Keys);
 
-    /// <summary>Validates and stores a file; returns a new Document (not yet saved to the DB) or an error.</summary>
+    /// <summary>
+    /// Validates and stores a file; returns a new Document (not yet saved to the DB) or an error.
+    /// Large or sideways photos are stored smaller and upright; Sha256 is always of the file as
+    /// uploaded, so the same photo sent twice is still recognised.
+    /// </summary>
     public async Task<(Document? Doc, string? Error)> SaveAsync(Stream content, string fileName, long length, int officeId, int clientId)
     {
-        var ext = Path.GetExtension(fileName);
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
         if (!Allowed.TryGetValue(ext, out var contentType))
             return (null, $"{fileName}: dozvoljeni su samo JPG, PNG, WEBP i PDF.");
-        if (length > MaxBytes)
-            return (null, $"{fileName}: datoteka je veća od 7 MB.");
+        var isPdf = ext == ".pdf";
+        if (length > (isPdf ? MaxPdfBytes : MaxImageBytes))
+            return (null, $"{fileName}: datoteka je veća od {(isPdf ? MaxPdfBytes : MaxImageBytes) / (1024 * 1024)} MB.");
 
         using var ms = new MemoryStream();
         await content.CopyToAsync(ms);
-        var bytes = ms.ToArray();
+        var original = ms.ToArray();
+        var bytes = original;
+
+        if (!isPdf)
+        {
+            var shrunk = await ImageShrinker.ShrinkAsync(original);
+            if (shrunk is null)
+                return (null, $"{fileName}: slika se ne može otvoriti. Pošaljite je ponovo kao JPG ili PNG.");
+            if (shrunk.Changed)
+            {
+                bytes = shrunk.Bytes;
+                ext = ".jpg";
+                contentType = "image/jpeg";
+            }
+        }
 
         Directory.CreateDirectory(Path.Combine(_root, officeId.ToString()));
-        var stored = $"{officeId}/{Guid.NewGuid():N}{ext.ToLowerInvariant()}";
+        var stored = $"{officeId}/{Guid.NewGuid():N}{ext}";
         await File.WriteAllBytesAsync(Path.Combine(_root, stored), bytes);
 
         return (new Document
@@ -62,7 +84,7 @@ public class FileStore
             OriginalFileName = Path.GetFileName(fileName),
             StoredPath = stored,
             ContentType = contentType,
-            Sha256 = Convert.ToHexString(SHA256.HashData(bytes)),
+            Sha256 = Convert.ToHexString(SHA256.HashData(original)),
             Status = DocumentStatus.Uploaded,
             UploadedAt = DateTime.UtcNow
         }, null);
