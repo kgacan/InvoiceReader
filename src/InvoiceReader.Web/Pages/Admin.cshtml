@@ -7,21 +7,27 @@
     <h1>Administracija</h1>
 </div>
 
+<div id="result">
 @if (Model.Message is not null)
 {
     <p class="notice">@Model.Message</p>
 }
-@if (Model.NewLogin is not null)
+@if (Model.NewLoginPassword is not null)
 {
-    <section class="card">
+    <section class="card new-login" aria-live="polite">
         <h2>Pristupni podaci</h2>
-        <p>Pošaljite ih računovođi. Lozinka se prikazuje samo sada; poslije prve prijave može je promijeniti.</p>
-        <div class="copy-row">
-            <input id="new-login" type="text" readonly value="@Model.NewLogin" class="mono" />
-            <button type="button" data-copy="new-login">Kopiraj</button>
-        </div>
+        <dl>
+            <dt>Email</dt>
+            <dd class="mono">@Model.NewLoginEmail</dd>
+            <dt>Lozinka</dt>
+            <dd class="mono secret">@Model.NewLoginPassword</dd>
+        </dl>
+        <p class="hint">Pošaljite ih računovođi. Lozinka se prikazuje samo sada; poslije prijave može je promijeniti klikom na svoje ime.</p>
+        <textarea id="new-login" hidden>@Model.NewLoginText</textarea>
+        <button type="button" class="primary" data-copy="new-login">Kopiraj za slanje</button>
     </section>
 }
+</div>
 
 <h2>Uredi</h2>
 @foreach (var row in Model.Offices)

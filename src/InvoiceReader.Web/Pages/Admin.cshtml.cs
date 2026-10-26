@@ -23,8 +23,13 @@ public class AdminModel : PageModel
 
     [TempData] public string? Message { get; set; }
 
-    /// <summary>"email: password" of a just-created or reset login, shown once.</summary>
-    [TempData] public string? NewLogin { get; set; }
+    /// <summary>Email and password of a just-created or reset login, shown once.</summary>
+    [TempData] public string? NewLoginEmail { get; set; }
+    [TempData] public string? NewLoginPassword { get; set; }
+
+    /// <summary>What the copy button puts on the clipboard, ready to send to the accountant.</summary>
+    public string NewLoginText =>
+        $"Prijava: {Request.Scheme}://{Request.Host}/Login\nEmail: {NewLoginEmail}\nLozinka: {NewLoginPassword}";
 
     public async Task OnGetAsync()
     {
@@ -47,17 +52,17 @@ public class AdminModel : PageModel
         if (string.IsNullOrWhiteSpace(officeName))
         {
             Message = "Unesite naziv ureda.";
-            return RedirectToPage();
+            return Back();
         }
         var office = new Office { Name = officeName.Trim() };
         var error = await AddUserAsync(office, email, name);
         if (error is not null)
         {
             Message = error;
-            return RedirectToPage();
+            return Back();
         }
         Message = $"Ured {office.Name} je napravljen. Kontni plan i klijente ured unosi u Postavkama.";
-        return RedirectToPage();
+        return Back();
     }
 
     public async Task<IActionResult> OnPostAddUserAsync(int officeId, string email, string? name)
@@ -65,7 +70,7 @@ public class AdminModel : PageModel
         var office = await _db.Offices.FirstOrDefaultAsync(o => o.Id == officeId);
         if (office is null) return NotFound();
         Message = await AddUserAsync(office, email, name) ?? $"Korisnik je dodan u {office.Name}.";
-        return RedirectToPage();
+        return Back();
     }
 
     /// <summary>New random password; the old one and its sessions stop working.</summary>
@@ -76,9 +81,10 @@ public class AdminModel : PageModel
         var password = UserAccounts.GeneratePassword();
         UserAccounts.SetPassword(user, password);
         await _db.SaveChangesAsync();
-        NewLogin = $"{user.Email}: {password}";
+        NewLoginEmail = user.Email;
+        NewLoginPassword = password;
         Message = "Nova lozinka je napravljena. Stara više ne radi.";
-        return RedirectToPage();
+        return Back();
     }
 
     public async Task<IActionResult> OnPostToggleActiveAsync(int userId)
@@ -88,13 +94,19 @@ public class AdminModel : PageModel
         if (user.Id == CurrentUserId)
         {
             Message = "Ne možete isključiti svoj nalog.";
-            return RedirectToPage();
+            return Back();
         }
         user.IsActive = !user.IsActive;
         await _db.SaveChangesAsync();
         Message = user.IsActive ? $"{user.Email} je ponovo uključen." : $"{user.Email} je isključen i odjavljen.";
-        return RedirectToPage();
+        return Back();
     }
+
+    /// <summary>
+    /// Back to the page, scrolled to the message and new password at the top. Without the
+    /// fragment the browser keeps the old scroll position and they stay out of sight.
+    /// </summary>
+    private IActionResult Back() => RedirectToPage(pageName: null, pageHandler: null, routeValues: null, fragment: "result");
 
     /// <summary>Adds a login with a generated password to the office (saving a new office too). Null on success.</summary>
     private async Task<string?> AddUserAsync(Office office, string? email, string? name)
@@ -113,7 +125,8 @@ public class AdminModel : PageModel
         UserAccounts.SetPassword(user, password);
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
-        NewLogin = $"{normalized}: {password}";
+        NewLoginEmail = normalized;
+        NewLoginPassword = password;
         return null;
     }
 }
