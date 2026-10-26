@@ -24,6 +24,12 @@ public class AiOptions
     public string? ClaudeApiKey { get; set; }
     public string ClaudeModel { get; set; } = "claude-haiku-5-5";
     public string ClaudeStrongModel { get; set; } = "claude-sonnet-5-5";
+
+    /// <summary>
+    /// How much the model thinks before answering: "low", "medium" or "high". Copying fields off an
+    /// invoice needs little; higher costs more tokens and time.
+    /// </summary>
+    public string ClaudeEffort { get; set; } = "low";
     public string? GeminiApiKey { get; set; }
     public string GeminiModel { get; set; } = "gemini-3.1-flash-lite";
 }
@@ -39,6 +45,9 @@ public class ClaudeInvoiceReader : IInvoiceReader
         _http = http;
         _opt = opt;
     }
+
+    /// <summary>Thinking plus the JSON answer; at effort "low" a read uses far less.</summary>
+    public const int MaxTokens = 16000;
 
     public string Name => $"Claude ({_opt.ClaudeModel}, provjera: {_opt.ClaudeStrongModel})";
     public bool HasStrongModel => !string.IsNullOrWhiteSpace(_opt.ClaudeStrongModel);
@@ -60,10 +69,13 @@ public class ClaudeInvoiceReader : IInvoiceReader
                 ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = contentType, ["data"] = base64 }
             };
 
+        // Current Claude models think before they answer, and thinking counts towards max_tokens:
+        // leave plenty of room so the JSON answer is never cut off. Effort keeps the thinking short.
         var body = new JsonObject
         {
             ["model"] = model,
-            ["max_tokens"] = 1024,
+            ["max_tokens"] = MaxTokens,
+            ["output_config"] = new JsonObject { ["effort"] = _opt.ClaudeEffort },
             ["messages"] = new JsonArray
             {
                 new JsonObject
@@ -85,6 +97,12 @@ public class ClaudeInvoiceReader : IInvoiceReader
             throw new InvalidOperationException($"Claude API {(int)res.StatusCode}: {Trim(text)}");
 
         using var doc = JsonDocument.Parse(text);
+        var stopReason = doc.RootElement.TryGetProperty("stop_reason", out var sr) ? sr.GetString() : null;
+        if (stopReason == "max_tokens")
+            throw new InvalidOperationException($"Claude ({model}) je prekinuo odgovor prije kraja (max_tokens). Pokušajte ponovo.");
+        if (stopReason == "refusal")
+            throw new InvalidOperationException($"Claude ({model}) je odbio pročitati ovaj dokument.");
+
         var answer = string.Concat(doc.RootElement.GetProperty("content").EnumerateArray()
             .Where(b => b.GetProperty("type").GetString() == "text")
             .Select(b => b.GetProperty("text").GetString()));

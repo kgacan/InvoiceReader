@@ -87,14 +87,22 @@ public class ProcessingWorker : BackgroundService
                 var known = await KnownSuppliers.LoadAsync(db, doc.OfficeId, ct);
                 (result, warnings) = await ReadAndCheckAsync(reader, db, doc, bytes, known, useStrongModel: false, today, ct);
 
-                // Second opinion from the stronger model when the cheap read looks wrong.
+                // Second opinion from the stronger model when the cheap read looks wrong. If that
+                // call fails, the first read is kept for the accountant to check.
                 if (reader.HasStrongModel && InvoiceChecks.NeedsSecondOpinion(warnings))
                 {
-                    var (second, secondWarnings) = await ReadAndCheckAsync(reader, db, doc, bytes, known, useStrongModel: true, today, ct);
-                    if (secondWarnings.Count < warnings.Count)
+                    try
                     {
-                        result = second;
-                        warnings = secondWarnings;
+                        var (second, secondWarnings) = await ReadAndCheckAsync(reader, db, doc, bytes, known, useStrongModel: true, today, ct);
+                        if (secondWarnings.Count < warnings.Count)
+                        {
+                            result = second;
+                            warnings = secondWarnings;
+                        }
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        _log.LogWarning(ex, "Second opinion for document {Id} failed; keeping the first read", doc.Id);
                     }
                 }
             }
